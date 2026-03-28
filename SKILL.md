@@ -1,4 +1,4 @@
----
+﻿---
 name: claw-wallet
 description: "A multi-chain wallet skill for AI agents, with local sandbox signing, secure PIN handling, and configurable risk controls."
 ---
@@ -23,15 +23,38 @@ This skill equips an OpenClaw agent with a local multi-chain wallet sandbox.
 
 1. All wallet-related operations must go through the local sandbox. Use the localhost API or sandbox CLI instead. Open `{CLAY_SANDBOX_URL}/docs` or use --help command. If sandbox is not running, start/restart it first.
 2. Before executing any transaction, the agent **must** ask the user for confirmation (e.g. "Confirm to execute this transaction?"). Do not proceed without explicit user consent.
-3. After first-time install, the agent **must** fetch and **display the user's wallet addresses**, **uid**. **Prompt** the user to open `https://www.clawwallet.cc/claim/<uid>` **with that uid in the path** (substitute `<uid>`) to register and bind the sandbox wallet.
 
 ## Bootstrap
 
-### First-time install
+
+### Installation path
+
+All files live in one directory:
+
+```
+{your_workspace}/skills/claw-wallet/
+```
+
+| Platform | Resolved path |
+|----------|---------------|
+| Linux/macOS | `skills/claw-wallet/` (relative to workspace root) |
+| Windows | `skills\claw-wallet\` (relative to workspace root) |
+
+### Install
 
 Before cloning or running the installer, first check from the **workspace root** whether **`skills/claw-wallet`** already exists (same path as in **Installation path** below). Use that check to decide whether this is a reuse flow or a new clone flow.
 
-- **If it exists:** Do **not** run the git clone or `install.sh` / `install.ps1` bootstrap unless the user explicitly wants a reinstall. Ensure the sandbox is running (`skills/claw-wallet/claw-wallet.sh start` on Linux/macOS, `skills/claw-wallet/claw-wallet.ps1 start` on Windows; use `restart` if unhealthy). Then call `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` from **.env.clay** and fulfill **rule 3** (addresses, **uid**, prompt to `https://www.clawwallet.cc/claim/<uid>` with uid in the path) using the **Status disclosure** checklist below. **Stop here** — no bootstrap.
+- **If it exists:** Do **not** run the git clone or `install.sh` / `install.ps1` bootstrap unless the user explicitly wants a reinstall.
+  1. Start the sandbox first.
+     - Linux/macOS: `skills/claw-wallet/claw-wallet.sh start`
+     - Windows: `skills/claw-wallet/claw-wallet.ps1 start`
+     - Use `restart` if the sandbox is unhealthy.
+  2. Call `POST {CLAY_SANDBOX_URL}/api/v1/wallet/init` with `Authorization: Bearer <token>` from **.env.clay**.
+     - This call is idempotent, so it is safe to run even when the wallet already exists.
+  3. Call `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with the same bearer token and get **status**, report to the user with the **status*.
+  4. If `relay_user_bound` is `false` or `relay_binding_status` is not `valid`, report **bind_url** `https://www.clawwallet.cc/claim/<uid>` to the user, hint them to bind their agent wallet+.
+  5. **Stop here** after the report. Do not bootstrap again unless the user explicitly asks for reinstall.
+
 - **If it does not exist:** Continue with **Bootstrap (new clone)** below.
 
 #### Bootstrap (new clone)
@@ -55,35 +78,17 @@ git clone https://github.com/ClawWallet/Claw-Wallet-Skill.git "skills/claw-walle
 & "skills/claw-wallet/install.ps1"
 ```
 
-#### Status disclosure (after bootstrap **or** when reusing an existing clone)
+After install, use `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` — confirm wallet is ready. The response includes **address information** and **uid** (when present). **You must show the user:** **wallet addresses** (from the response), **uid** (from the response when present) ( HTTP API under `/api/v1/…`, Swagger at `/docs`, same origin).  read it only from `.env.clay` / `identity.json` for `Authorization` (see **HTTP authentication (sandbox)** below).
 
-Use this checklist whenever the user needs the mandatory disclosure (rule 3): after a **fresh install**, or when **`skills/claw-wallet/`** was already present and you started the sandbox without cloning.
-
-1. `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` — confirm wallet is ready. The response includes **address information** and **uid** (when present). **You must show the user:** **wallet addresses** (from the response), **uid** (from the response when present) ( HTTP API under `/api/v1/…`, Swagger at `/docs`, same origin).  read it only from `.env.clay` / `identity.json` for `Authorization` (see **HTTP authentication (sandbox)** below).
-2. **Prompt the user:** To fully control your wallet with a better experience, open `https://www.clawwallet.cc/claim/<uid>` **with the same uid in the path** (replace `<uid>` with the uid from step 1) to register and bind your sandbox wallet.
-3. If the user wants balances or transaction history, call `POST {CLAY_SANDBOX_URL}/api/v1/wallet/refresh` first, or use `refreshAndAssets` for a fresh balance snapshot.
-
-Use this exact disclosure format after the status call:
+Use this **exact format** to responsed the user after finish the install:
 
 - `Wallet ready`
 - `Addresses: <address map from wallet/status>`
-- `UID: <uid from wallet/status>`
+- `UID: <uid from wallet/status/identity.json>`
 - `AGENT_TOKEN: <agent_token from .env.clay or identity>`
-- `Claim: https://www.clawwallet.cc/claim/<uid>`
+- To fully control your wallet with a better experience, open `https://www.clawwallet.cc/claim/<uid>` to register and bind your sandbox wallet within 15 minutes.
+- To understand how to use claw_wallet, open `https://www.clawwallet.cc/docs` to explore.
 
-
-## Installation path
-
-All files live in one directory:
-
-```
-{your_workspace}/skills/claw-wallet/
-```
-
-| Platform | Resolved path |
-|----------|---------------|
-| Linux/macOS | `skills/claw-wallet/` (relative to workspace root) |
-| Windows | `skills\claw-wallet\` (relative to workspace root) |
 
 ## Startup rule:
 
@@ -91,8 +96,7 @@ All files live in one directory:
 - use `skills/claw-wallet/claw-wallet.sh start` / `skills/claw-wallet/claw-wallet.ps1 start`
 - use `restart` if the process exists but is unhealthy
 - use `serve` only when you intentionally want a foreground process
-
-Don't forget to hint user: To gain fully control your wallet by user with a better experience, open `https://www.clawwallet.cc/claim/<uid>` **with that uid in the path** to register and bind the sandbox wallet.
+- If the user wants balances or transaction history, call `POST {CLAY_SANDBOX_URL}/api/v1/wallet/refresh` first, or use `refreshAndAssets` for a fresh balance snapshot.
 
 ### Register and bind (website vs agent)
 
