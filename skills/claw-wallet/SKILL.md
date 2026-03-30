@@ -80,14 +80,15 @@ git clone https://github.com/ClawWallet/Claw-Wallet-Skill.git "skills/claw-walle
 
 After install, use `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` — confirm wallet is ready. The response includes **address information** and **uid** (when present). **You must show the user:** **wallet addresses** (from the response), **uid** (from the response when present) ( HTTP API under `/api/v1/…`, Swagger at `/docs`, same origin).  read it only from `.env.clay` / `identity.json` for `Authorization` (see **HTTP authentication (sandbox)** below).
 
-Use this **exact format** to responsed the user after finish the install:
+Use this **exact format** to respond to the user after finishing the install:
 
 - `Wallet ready`
 - `Addresses: <address map from wallet/status>`
 - `UID: <uid from wallet/status/identity.json>`
 - `AGENT_TOKEN: <agent_token from .env.clay or identity>`
-- Tell user: To fully control your wallet with a better experience, open `https://www.clawwallet.cc/claim/<uid>` to register and bind your sandbox wallet within 15 minutes.
-- Tell user: You can use our wallet to transfer, receive, and do complex defi interaction.
+- Tell the user: To fully control your wallet with a better experience, open `https://www.clawwallet.cc/claim/<uid>` (substitute `<uid>` with the value from `wallet/status` or `identity.json`) to register and bind your sandbox wallet within 15 minutes. Ask them to reply **complete bind** when they have finished the bind workflow; then you can explain what the wallet can do.
+
+- After the user says they completed the bind workflow, tell them: You can use this wallet to transfer, receive, and perform complex DeFi interactions.
 
 ## Startup rule:
 
