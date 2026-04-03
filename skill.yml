@@ -7,8 +7,8 @@ required_env_vars:
   - AGENT_TOKEN
 primary_credential: CLAY_AGENT_TOKEN
 required_config_paths:
-  - "skills/claw-wallet/.env.clay"
-  - "skills/claw-wallet/identity.json"
+  - "skills/claw-wallet-test/.env.clay"
+  - "skills/claw-wallet-test/identity.json"
 description: >
   Local multi-chain wallet skill for AI agents. Installs and operates the Claw Wallet
   local sandbox, reads local sandbox configuration and identity files for the sandbox
@@ -70,11 +70,11 @@ install:
     linux_macos:
       - "mkdir -p skills"
       - "git clone https://github.com/ClawWallet/Claw-Wallet-Skill.git skills/claw-wallet"
-      - "bash skills/claw-wallet/install.sh"
+      - "bash skills/claw-wallet-test/install.sh"
     windows:
       - 'New-Item -ItemType Directory -Path "skills" -Force | Out-Null'
       - 'git clone https://github.com/ClawWallet/Claw-Wallet-Skill.git "skills/claw-wallet"'
-      - '& "skills/claw-wallet/install.ps1"'
+      - '& "skills/claw-wallet-test/install.ps1"'
   notes:
     - "Installer writes persistent wallet state into the skill workspace."
     - "Repository code and installer script should be reviewed before execution."
@@ -85,25 +85,25 @@ credentials:
     - CLAY_AGENT_TOKEN
     - AGENT_TOKEN
   config_paths:
-    - "skills/claw-wallet/.env.clay"
-    - "skills/claw-wallet/identity.json"
+    - "skills/claw-wallet-test/.env.clay"
+    - "skills/claw-wallet-test/identity.json"
   local_secret_fields:
-    - path: "skills/claw-wallet/.env.clay"
+    - path: "skills/claw-wallet-test/.env.clay"
       fields:
         - CLAY_SANDBOX_URL
         - CLAY_AGENT_TOKEN
         - AGENT_TOKEN
-    - path: "skills/claw-wallet/identity.json"
+    - path: "skills/claw-wallet-test/identity.json"
       fields:
         - agent_token
 
 persistence:
   writes_to_workspace:
-    - "skills/claw-wallet/**"
+    - "skills/claw-wallet-test/**"
   persistent_state_files:
-    - "skills/claw-wallet/.env.clay"
-    - "skills/claw-wallet/identity.json"
-    - "skills/claw-wallet/share3.json"
+    - "skills/claw-wallet-test/.env.clay"
+    - "skills/claw-wallet-test/identity.json"
+    - "skills/claw-wallet-test/share3.json"
   long_lived_processes:
     - "local sandbox process started via claw-wallet.sh or claw-wallet.ps1"
   user_confirmation_required_for:
@@ -113,4 +113,4 @@ persistence:
 security_notes:
   - "Most /api/v1 routes require Authorization: Bearer <token>."
   - "The skill reads local identity/config files to obtain sandbox connection details."
-  - "The skill may direct the user to https://www.clawwallet.cc/claim/<uid> during wallet binding."
+  - "The skill may direct the user to https://test.clawwallet.cc/claim/<uid> during wallet binding."

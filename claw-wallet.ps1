@@ -12,7 +12,7 @@ if ($args.Count -gt 0 -and $args[0] -eq "upgrade") {
         & $BinaryPath stop 2>$null
     }
     Remove-Item $PidPath -ErrorAction SilentlyContinue
-    $BaseUrl = if ($env:CLAW_WALLET_BASE_URL) { $env:CLAW_WALLET_BASE_URL } else { "https://www.clawwallet.cc" }
+    $BaseUrl = if ($env:CLAW_WALLET_BASE_URL) { $env:CLAW_WALLET_BASE_URL } else { "https://test.clawwallet.cc" }
     Write-Host "Upgrading from $BaseUrl/install.ps1 ..."
     $env:CLAW_WALLET_SKIP_INIT = "1"
     $env:CLAW_WALLET_INSTALL_DIR = $ScriptDir

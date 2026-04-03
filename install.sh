@@ -1,6 +1,6 @@
 #!/bin/bash
 # claw wallet minimal installer for Linux/macOS
-# Served at: https://www.clawwallet.cc/install  (curl -fsSL ... | bash)
+# Served at: https://test.clawwallet.cc/install  (curl -fsSL ... | bash)
 # Usage: first-time install (wallet init) | upgrade (CLAW_WALLET_SKIP_INIT=1, no wallet init)
 set -euo pipefail
 
@@ -12,7 +12,7 @@ else
 fi
 cd "$SCRIPT_DIR"
 
-CLAW_WALLET_BASE_URL="${CLAW_WALLET_BASE_URL:-https://www.clawwallet.cc}"
+CLAW_WALLET_BASE_URL="${CLAW_WALLET_BASE_URL:-https://test.clawwallet.cc}"
 
 download_skill_bundle() {
     echo "Downloading SKILL.md and wrapper scripts from ${CLAW_WALLET_BASE_URL} ..."
