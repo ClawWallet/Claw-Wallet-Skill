@@ -3,6 +3,7 @@ $BinaryPath = Join-Path $ScriptDir "clay-sandbox.exe"
 $LogPath = Join-Path $ScriptDir "sandbox.log"
 $ErrLogPath = Join-Path $ScriptDir "sandbox_err.log"
 $PidPath = Join-Path $ScriptDir "sandbox.pid"
+$SkillBranch = if ($env:CLAW_WALLET_SKILL_BRANCH) { $env:CLAW_WALLET_SKILL_BRANCH } else { "dev" }
 
 # upgrade runs before binary check (remote install script + binary, no git)
 if ($args.Count -gt 0 -and $args[0] -eq "upgrade") {

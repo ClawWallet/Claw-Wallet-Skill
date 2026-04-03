@@ -5,6 +5,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BIN="$SCRIPT_DIR/clay-sandbox"
 LOG_FILE="$SCRIPT_DIR/sandbox.log"
 PID_FILE="$SCRIPT_DIR/sandbox.pid"
+SKILL_BRANCH="${CLAW_WALLET_SKILL_BRANCH:-dev}"
 
 stop_sandbox() {
     cd "$SCRIPT_DIR"

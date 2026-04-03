@@ -2,6 +2,8 @@
 
 Local sandbox wallet skill for OpenClaw and Claude Code agents. Install the sandbox locally, operate through localhost APIs or CLI, and support both local wallets and phase2 remote-managed wallets.
 
+This `README` targets the `dev` test environment. The installer and upgrade flow pull skill code from [`Claw-Wallet-Skill`](https://github.com/ClawWallet/Claw-Wallet-Skill/tree/dev) `dev` and sandbox binaries from [`Claw_Wallet_Bin`](https://github.com/ClawWallet/Claw_Wallet_Bin/tree/dev) `dev`.
+
 ## Claude Code marketplace
 
 This repository is now structured so it can be added as a third-party Claude Code marketplace.
@@ -40,6 +42,8 @@ Invoke-WebRequest -Uri "https://nex-claw.vercel.app/install.ps1" -OutFile "insta
 
 ### Option: npx skills add
 
+For the `dev` test environment, prefer Option 1 so the local checkout is pinned to the `dev` branch explicitly.
+
 ```bash
 npx skills add ClawWallet/Claw-Wallet-Skill -a openclaw --yes
 ```
@@ -57,7 +61,7 @@ Verify status:
 - `GET {CLAY_SANDBOX_URL}/health` — expected: `{"status": "ok"}`
 - `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` — confirm wallet is ready
 
-Token and URL are in `skills/claw-wallet/.env.clay`.
+Token and URL are in `skills/claw-wallet-dev/.env.clay`.
 
 ## Documentation
 
