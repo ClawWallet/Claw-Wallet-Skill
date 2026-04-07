@@ -66,7 +66,7 @@ Linux/macOS:
 ```bash
 mkdir -p skills/claw-wallet-dev
 cd skills/claw-wallet-dev
-curl -fsSL https://test.clawwallet.cc/install | bash
+curl -fsSL https://test.clawwallet.cc/skills/install.sh | bash
 ```
 
 Windows PowerShell (from workspace root; run after creating `skills\claw-wallet-dev`):
@@ -74,7 +74,7 @@ Windows PowerShell (from workspace root; run after creating `skills\claw-wallet-
 ```powershell
 New-Item -ItemType Directory -Path "skills\claw-wallet-dev" -Force | Out-Null
 Set-Location "skills\claw-wallet-dev"
-Invoke-WebRequest -Uri "https://test.clawwallet.cc/install.ps1" -OutFile "install.ps1" -UseBasicParsing
+Invoke-WebRequest -Uri "https://test.clawwallet.cc/skills/install.ps1" -OutFile "install.ps1" -UseBasicParsing
 & ".\install.ps1"
 ```
 
@@ -191,7 +191,7 @@ You can Open `{CLAY_SANDBOX_URL}/docs` to see the list of our API and how to use
 
 Re-download **`SKILL.md`**, wrapper scripts, and the sandbox binary from **`CLAW_WALLET_BASE_URL`** (default `https://test.clawwallet.cc`) by running **`upgrade`** on the wrapper. Wallet data (`.env.clay`, `identity.json`, `share3.json`) is preserved.
 
-Linux/macOS: the wrapper runs `curl -fsSL …/install | bash` with `CLAW_WALLET_SKIP_INIT=1`. Windows: downloads and runs **`install.ps1`** from the same host.
+Linux/macOS: the wrapper runs `curl -fsSL …/skills/install.sh | bash` with `CLAW_WALLET_SKIP_INIT=1`. Windows: downloads and runs **`/skills/install.ps1`** from the same host.
 
 Linux/macOS:
 
