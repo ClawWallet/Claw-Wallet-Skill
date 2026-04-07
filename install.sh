@@ -12,13 +12,13 @@ else
 fi
 cd "$SCRIPT_DIR"
 
-CLAW_WALLET_BASE_URL="${CLAW_WALLET_BASE_URL:-https://test.clawwallet.cc/skills}"
+CLAW_WALLET_BASE_URL="${CLAW_WALLET_BASE_URL:-https://test.clawwallet.cc}"
 
 download_skill_bundle() {
     echo "Downloading SKILL.md and wrapper scripts from ${CLAW_WALLET_BASE_URL} ..."
-    curl -fsSL "${CLAW_WALLET_BASE_URL}/SKILL.md" -o SKILL.md
-    curl -fsSL "${CLAW_WALLET_BASE_URL}/claw-wallet.sh" -o claw-wallet.sh
-    curl -fsSL "${CLAW_WALLET_BASE_URL}/claw-wallet" -o claw-wallet
+    curl -fsSL "${CLAW_WALLET_BASE_URL}/skills/SKILL.md" -o SKILL.md
+    curl -fsSL "${CLAW_WALLET_BASE_URL}/skills/claw-wallet.sh" -o claw-wallet.sh
+    curl -fsSL "${CLAW_WALLET_BASE_URL}/skills/claw-wallet" -o claw-wallet
     chmod +x claw-wallet.sh claw-wallet
 }
 
