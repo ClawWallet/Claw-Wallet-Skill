@@ -10,17 +10,17 @@ if ($env:CLAW_WALLET_INSTALL_DIR) {
 }
 Set-Location -Path $ScriptDir
 
-$BaseUrl = if ($env:CLAW_WALLET_BASE_URL) { $env:CLAW_WALLET_BASE_URL } else { "https://test.clawwallet.cc/skills" }
+$BaseUrl = if ($env:CLAW_WALLET_BASE_URL) { $env:CLAW_WALLET_BASE_URL } else { "https://test.clawwallet.cc" }
 
 function Download-SkillBundle {
     Write-Host "Downloading SKILL.md and wrapper scripts from $BaseUrl ..."
     $skillMd = Join-Path $ScriptDir "SKILL.md"
-    Invoke-WebRequest -Uri "$BaseUrl/SKILL.md" -OutFile $skillMd -UseBasicParsing
+    Invoke-WebRequest -Uri "$BaseUrl/skills/SKILL.md" -OutFile $skillMd -UseBasicParsing
     $ps1 = Join-Path $ScriptDir "claw-wallet.ps1"
-    Invoke-WebRequest -Uri "$BaseUrl/claw-wallet.ps1" -OutFile $ps1 -UseBasicParsing
+    Invoke-WebRequest -Uri "$BaseUrl/skills/claw-wallet.ps1" -OutFile $ps1 -UseBasicParsing
     $cmdPath = Join-Path $ScriptDir "claw-wallet.cmd"
     try {
-        Invoke-WebRequest -Uri "$BaseUrl/claw-wallet.cmd" -OutFile $cmdPath -UseBasicParsing
+        Invoke-WebRequest -Uri "$BaseUrl/skills/claw-wallet.cmd" -OutFile $cmdPath -UseBasicParsing
     } catch {
         Write-Host "Note: claw-wallet.cmd not available from server (optional)."
     }
