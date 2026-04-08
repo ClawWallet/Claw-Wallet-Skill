@@ -1,10 +1,10 @@
 #!/bin/bash
 # claw wallet minimal installer for Linux/macOS
-# Served at: https://test.clawwallet.cc/skills/install.sh  (curl -fsSL ... | bash)
+# Served at: https://www.clawwallet.cc/skills/install.sh  (curl -fsSL ... | bash)
 # Usage: first-time install (wallet init) | upgrade (CLAW_WALLET_SKIP_INIT=1, no wallet init)
 set -euo pipefail
 
-# Piped from curl: BASH_SOURCE is "-"; use cwd (user should: mkdir -p skills/claw-wallet-test && cd skills/claw-wallet-test)
+# Piped from curl: BASH_SOURCE is "-"; use cwd (user should: mkdir -p skills/claw-wallet && cd skills/claw-wallet)
 if [[ "${BASH_SOURCE[0]:-}" == "-" ]]; then
     SCRIPT_DIR="$(pwd -P)"
 else
@@ -12,7 +12,7 @@ else
 fi
 cd "$SCRIPT_DIR"
 
-CLAW_WALLET_BASE_URL="${CLAW_WALLET_BASE_URL:-https://test.clawwallet.cc}"
+CLAW_WALLET_BASE_URL="${CLAW_WALLET_BASE_URL:-https://www.clawwallet.cc}"
 
 download_skill_bundle() {
     echo "Downloading SKILL.md and wrapper scripts from ${CLAW_WALLET_BASE_URL} ..."
