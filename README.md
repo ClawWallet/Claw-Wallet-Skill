@@ -1,19 +1,22 @@
 # Claw Wallet Skill
 
-Local sandbox wallet skill for OpenClaw and Claude Code agents. Install the sandbox locally, operate through localhost APIs or CLI, and support both local wallets and phase2 remote-managed wallets.
+Hermes / Agent Skills compatible wallet skill for Claw Wallet. The skill document follows the standard `SKILL.md` frontmatter format that Hermes expects, while the wallet runtime it manages still installs persistent state into `skills/claw-wallet` inside the active workspace.
 
-## Claude Code marketplace
+## Hermes packaging
 
-This repository is now structured so it can be added as a third-party Claude Code marketplace.
+Hermes discovers skills from skill directories that contain a `SKILL.md` file. For local development, place this skill in a Hermes skills directory such as:
 
-Use:
+- `~/.hermes/skills/finance/claw-wallet/`
+- `workspace/.agents/skills/claw-wallet/`
+
+The skill package itself is Hermes-compatible; the wallet runtime it controls still uses `skills/claw-wallet/` as its workspace install path.
+
+Useful Hermes commands:
 
 ```bash
-/plugin marketplace add <this-repo-url>
-/plugin install claw-wallet@claw-wallet-marketplace
+hermes skills list
+hermes skills search wallet
 ```
-
-This is a community marketplace setup, not an Anthropic-curated listing. To appear in Anthropic's official directory, the repo still needs to pass their review and submission flow.
 
 ## Installation
 
@@ -38,15 +41,11 @@ Invoke-WebRequest -Uri "https://www.clawwallet.cc/install.ps1" -OutFile "install
 & ".\install.ps1"
 ```
 
-### Option: npx skills add
+### Using with Hermes
 
-For the `dev` test environment, prefer Option 1 so the local checkout is pinned to the `dev` branch explicitly.
+Hermes loads this repository as a skill package, but the actual wallet binaries and local config are still installed by the Claw Wallet bootstrap flow into `skills/claw-wallet`.
 
-```bash
-npx skills add ClawWallet/Claw-Wallet-Skill -a openclaw --yes
-```
-
-Then run the installer from the cloned skill directory (or use the curl flow above instead of git).
+After the skill is available to Hermes, use the install flow below from the active workspace root.
 
 ### Developing from this repo
 

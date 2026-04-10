@@ -1,7 +1,22 @@
 ---
-name: claw-wallet
-description: "A multi-chain wallet skill for AI agents, with local sandbox signing, secure PIN handling, and configurable risk controls."
-metadata: {"openclaw":{"always":false,"autonomousInvocation":false,"modelInvocation":{"default":"require-user-confirmation","reason":"Reinstall, upgrade, uninstall, and transaction execution require explicit user confirmation."},"homepage":"https://github.com/ClawWallet/Claw-Wallet-Skill","repository":"https://github.com/ClawWallet/Claw-Wallet-Skill","upstream":{"skillRepo":"https://github.com/ClawWallet/Claw-Wallet-Skill","binaryRepo":"https://github.com/ClawWallet/Claw_Wallet_Bin","distributionHost":"https://www.clawwallet.cc/skills","distributionBase":"https://www.clawwallet.cc","branch":"dev","hosts":["github.com","www.clawwallet.cc"],"reviewNotes":["This repository contains the skill source and wrapper scripts.","Claw_Wallet_Bin contains the sandbox binaries referenced by the installer.","www.clawwallet.cc distributes the published installer, wrappers, and binaries for the dev environment."]},"os":["darwin","linux","win32"],"primaryEnv":"CLAY_AGENT_TOKEN","requires":{"bins":[],"anyBins":["bash","sh","pwsh","powershell","curl"],"env":["CLAY_SANDBOX_URL","CLAY_AGENT_TOKEN","AGENT_TOKEN"],"configPaths":["skills/claw-wallet/.env.clay","skills/claw-wallet/identity.json"]},"env":[{"name":"CLAY_SANDBOX_URL","description":"Base URL for the local Claw Wallet sandbox HTTP server.","required":true,"sensitive":false},{"name":"CLAY_AGENT_TOKEN","description":"Primary bearer token used for authenticated sandbox API calls.","required":true,"sensitive":true},{"name":"AGENT_TOKEN","description":"Legacy alias for the same sandbox bearer token.","required":false,"sensitive":true}],"configPaths":[{"path":"skills/claw-wallet/.env.clay","description":"Local sandbox connection file containing CLAY_SANDBOX_URL plus CLAY_AGENT_TOKEN or AGENT_TOKEN.","required":true},{"path":"skills/claw-wallet/identity.json","description":"Local sandbox identity file containing agent_token and wallet identity metadata.","required":true}],"install":{"type":"bootstrap-script","targetPath":"skills/claw-wallet","sourceRepo":"https://www.clawwallet.cc/skills","homepage":"https://github.com/ClawWallet/Claw-Wallet-Skill","repository":"https://github.com/ClawWallet/Claw-Wallet-Skill","provenance":{"skillRepo":"https://github.com/ClawWallet/Claw-Wallet-Skill","binaryRepo":"https://github.com/ClawWallet/Claw_Wallet_Bin","distributionHost":"https://www.clawwallet.cc/skills","branch":"dev"},"commands":{"linux_macos":["mkdir -p skills/claw-wallet","cd skills/claw-wallet && curl -fsSL https://www.clawwallet.cc/skills/install.sh | bash"],"windows":["New-Item -ItemType Directory -Path \"skills\\\\claw-wallet\" -Force | Out-Null","Set-Location \"skills\\\\claw-wallet\"","Invoke-WebRequest -Uri \"https://www.clawwallet.cc/skills/install.ps1\" -OutFile \"install.ps1\" -UseBasicParsing","& \".\\\\install.ps1\""]}},"privilegePolicy":{"persistentWorkspaceWrites":true,"longLivedProcess":true,"allowedWriteScope":["skills/claw-wallet/**"],"requiresExplicitUserConfirmation":["reinstall","upgrade","uninstalling the wallet skill"],"notes":["Do not autonomously reinstall, upgrade, or uninstall the skill without user confirmation.","Persistent files are limited to the skill workspace under skills/claw-wallet.","First-time install and normal start/restart are allowed without extra confirmation."]}}}
+name: claw-wallet-basic
+description: Install, start, and operate the Claw Wallet local sandbox with the core wallet workflow only; read wallet status, bind wallets, sign messages and transactions, transfer assets, and manage security policies. Use when a Hermes agent needs the basic Claw Wallet runtime without marketplace guidance.
+version: 0.2.0
+compatibility: Hermes Agent / Agent Skills. Requires bash or PowerShell, curl or localhost HTTP access to CLAY_SANDBOX_URL, write access to skills/claw-wallet/**, and network access to https://www.clawwallet.cc for installation or upgrade flows.
+metadata:
+  hermes:
+    category: finance
+    tags:
+      - wallet
+      - crypto
+      - signing
+      - security
+    homepage: https://github.com/ClawWallet/Claw-Wallet-Skill
+    repository: https://github.com/ClawWallet/Claw-Wallet-Skill
+    platforms:
+      - darwin
+      - linux
+      - win32
 ---
 
 ## Use this skill when...
@@ -20,7 +35,7 @@ You can always know how-to-use by Swagger-UI at `{CLAY_SANDBOX_URL}/docs`
 
 # claw wallet skill
 
-This skill equips an OpenClaw agent with a local multi-chain wallet sandbox.
+This skill equips a Hermes-compatible agent with a local multi-chain wallet sandbox.
 
 ## Registry metadata
 
@@ -111,7 +126,7 @@ Use this **exact format** to respond to the user after finishing the install:
 
 ## Startup rule:
 
-- do not run `clay-sandbox` directly as a long-lived foreground daemon from OpenClaw
+- do not run `clay-sandbox` directly as a long-lived foreground daemon from Hermes
 - use `skills/claw-wallet/claw-wallet.sh start` / `skills/claw-wallet/claw-wallet.ps1 start`
 - use `restart` if the process exists but is unhealthy
 - use `serve` only when you intentionally want a foreground process
@@ -308,5 +323,5 @@ Use refresh only when it protects correctness:
 - The sandbox already refreshes automatically in the corresponding managed execution paths when it needs to.
 - For manual refresh, use the sandbox `refresh` CLI command or the `POST /api/v1/wallet/refresh` API.
 - If you need a fresh snapshot immediately after refresh, prefer `refreshAndAssets` instead of `assets` alone.
-- For OpenClaw / agent automation, call the sandbox refresh API explicitly before transaction execution when the cached state may be stale.
+- For Hermes or other compatible agents, call the sandbox refresh API explicitly before transaction execution when the cached state may be stale.
 - Do not refresh on every read. Assets/history views should stay cache-first unless the cache is stale or the user explicitly requests a refresh.
