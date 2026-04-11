@@ -63,14 +63,28 @@ function Do-WalletInit {
         if ($sandboxUrl) {
             try {
                 $health = Invoke-RestMethod -Uri "$sandboxUrl/health" -Method Get -ErrorAction Stop
-                if ($health.status -eq "ok" -and $agentToken) {
-                    $headers = @{
-                        "Authorization" = "Bearer $agentToken"
-                        "Content-Type" = "application/json"
+                if ($health.status -eq "ok") {
+                    $initParams = @{
+                        Uri         = "$sandboxUrl/api/v1/wallet/init"
+                        Method      = "Post"
+                        Body        = "{}"
+                        ErrorAction = "Stop"
                     }
-                    $initResp = Invoke-RestMethod -Uri "$sandboxUrl/api/v1/wallet/init" -Method Post -Headers $headers -Body "{}" -ErrorAction Stop
+                    if ($agentToken) {
+                        $initParams["Headers"] = @{
+                            "Authorization" = "Bearer $agentToken"
+                            "Content-Type"  = "application/json"
+                        }
+                    } else {
+                        $initParams["Headers"] = @{
+                            "Content-Type" = "application/json"
+                        }
+                    }
+                    $initResp = Invoke-RestMethod @initParams
                     if ($initResp) {
                         Write-Host "Wallet initialized."
+                    } else {
+                        Write-Host "Wallet init request completed."
                     }
                     return
                 }
@@ -80,7 +94,7 @@ function Do-WalletInit {
         }
         Start-Sleep -Seconds 1
     }
-    Write-Host "Warning: health not ok or .env.clay not ready after 90s. Check sandbox.log, then run POST {CLAY_SANDBOX_URL}/api/v1/wallet/init manually. See SKILL.md."
+    Write-Host "Warning: health not ok or .env.clay not ready after 90s. Check sandbox.log, then run POST {CLAY_SANDBOX_URL}/api/v1/wallet/init manually. If AGENT_TOKEN is empty, local dev mode allows the request without Authorization. See SKILL.md."
 }
 
 if ($env:CLAW_WALLET_SKIP_INIT -ne "1") {

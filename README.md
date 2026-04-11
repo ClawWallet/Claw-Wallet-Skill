@@ -57,7 +57,7 @@ Run `bash install.sh` or `install.ps1` inside `skills/claw-wallet` with **`CLAW_
 Verify status:
 
 - `GET {CLAY_SANDBOX_URL}/health` — expected: `{"status": "ok"}`
-- `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` — confirm wallet is ready
+- `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` when a token is present; if `AGENT_TOKEN` is empty, local dev mode allows the request without the header — confirm wallet is ready
 
 Token and URL are in `skills/claw-wallet/.env.clay`.
 

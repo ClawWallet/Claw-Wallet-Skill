@@ -83,19 +83,22 @@ do_wallet_init() {
             REASON=".env.clay (CLAY_SANDBOX_URL)"
         elif ! curl -s -f "${CLAY_SANDBOX_URL}/health" 2>/dev/null | grep -qE '"status"[[:space:]]*:[[:space:]]*"ok"'; then
             REASON="health ok at ${CLAY_SANDBOX_URL}"
-        elif [ -z "${CLAY_AGENT_TOKEN:-}" ]; then
-            REASON="CLAY_AGENT_TOKEN in .env.clay"
         else
             echo "  Calling wallet/init ..."
+            auth_args=()
+            if [ -n "${CLAY_AGENT_TOKEN:-}" ]; then
+                auth_args=(-H "Authorization: Bearer ${CLAY_AGENT_TOKEN}")
+            fi
             if init_resp="$(curl -sS -f -X POST "${CLAY_SANDBOX_URL}/api/v1/wallet/init" \
-                -H "Authorization: Bearer ${CLAY_AGENT_TOKEN}" \
+                "${auth_args[@]}" \
                 -H "Content-Type: application/json" \
                 -d '{}' 2>/dev/null)"; then
                 if printf '%s' "$init_resp" | grep -qE '"uid"|"status"'; then
                     echo "Wallet initialized."
                     return 0
                 fi
-                REASON="wallet/init success payload from ${CLAY_SANDBOX_URL}"
+                echo "Wallet init request completed."
+                return 0
             else
                 REASON="wallet/init at ${CLAY_SANDBOX_URL}"
             fi
@@ -103,7 +106,7 @@ do_wallet_init() {
         [ "$((i % 10))" -eq 0 ] && echo "  Still waiting for ${REASON} ... (${i}s)"
         sleep 1
     done
-    echo "Error: wallet init did not complete after 90s. Check sandbox.log, then run POST {CLAY_SANDBOX_URL}/api/v1/wallet/init manually. See SKILL.md." >&2
+    echo "Error: wallet init did not complete after 90s. Check sandbox.log, then run POST {CLAY_SANDBOX_URL}/api/v1/wallet/init manually. If AGENT_TOKEN is empty, local dev mode allows the request without Authorization. See SKILL.md." >&2
     return 1
 }
 

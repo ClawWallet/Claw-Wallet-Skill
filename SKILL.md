@@ -16,6 +16,8 @@ Use this skill when the user wants to inspect wallet balances, token holdings, a
 
 Use this skill when the user wants to manage wallet security policies such as chain allowlists, token allowlists, transfer limits, or confirmation thresholds.
 
+Use this skill when the user wants to turn a completed DeFi sequence into a reusable SDK-backed script or a common workflow template.
+
 You can always know how-to-use by Swagger-UI at `{CLAY_SANDBOX_URL}/docs`
 
 # claw wallet skill
@@ -27,6 +29,7 @@ This skill equips an OpenClaw agent with a local multi-chain wallet sandbox.
 - Required local config files: `skills/claw-wallet/.env.clay` and `skills/claw-wallet/identity.json`
 - Required sandbox connection values: `CLAY_SANDBOX_URL` plus `CLAY_AGENT_TOKEN` or `AGENT_TOKEN`, read from those local files
 - Install method: bootstrap `install.sh` / `install.ps1` from `https://www.clawwallet.cc/skills` into `skills/claw-wallet`
+- Companion skills to load together when present: `claw-wallet-basic`, `wallet-chain-explorer`, `claw-wallet-defi-scripts`
 
 ## Privilege safety rule
 
@@ -195,6 +198,8 @@ We have a list of sandbox API at `{CLAY_SANDBOX_URL}/docs`,
 When `AGENT_TOKEN` is set, authenticated requests require:
 
 `Authorization: Bearer <CLAY_AGENT_TOKEN>`
+
+When `AGENT_TOKEN` is empty in local dev mode, the sandbox allows the same requests without an `Authorization` header.
 
 Use the token value from `.env.clay` or `identity.json` as described in **HTTP authentication (sandbox)** above.
 

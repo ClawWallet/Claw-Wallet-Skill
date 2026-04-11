@@ -1,0 +1,4 @@
+interface:
+  display_name: "Claw Wallet DeFi Scripts"
+  short_description: "Turn DeFi sequences into reusable workflow packages."
+  default_prompt: "Use $skill-name to turn a completed DeFi sequence into a reusable workflow package with workflow.md, workflow.json, run.mjs, and SDK call mapping."
