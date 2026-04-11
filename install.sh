@@ -165,12 +165,21 @@ do_wallet_init() {
             REASON="health ok at ${CLAY_SANDBOX_URL}"
         else
             echo "  Calling wallet/init ..."
-            auth_args=()
             if [ -n "${CLAY_AGENT_TOKEN:-}" ]; then
-                auth_args=(-H "Authorization: Bearer ${CLAY_AGENT_TOKEN}")
-            fi
-            if init_resp="$(curl -sS -f -X POST "${CLAY_SANDBOX_URL}/api/v1/wallet/init" \
-                "${auth_args[@]}" \
+                if init_resp="$(curl -sS -f -X POST "${CLAY_SANDBOX_URL}/api/v1/wallet/init" \
+                    -H "Authorization: Bearer ${CLAY_AGENT_TOKEN}" \
+                    -H "Content-Type: application/json" \
+                    -d '{}' 2>/dev/null)"; then
+                    if printf '%s' "$init_resp" | grep -qE '"uid"|"status"'; then
+                        echo "Wallet initialized."
+                        return 0
+                    fi
+                    echo "Wallet init request completed."
+                    return 0
+                else
+                    REASON="wallet/init at ${CLAY_SANDBOX_URL}"
+                fi
+            elif init_resp="$(curl -sS -f -X POST "${CLAY_SANDBOX_URL}/api/v1/wallet/init" \
                 -H "Content-Type: application/json" \
                 -d '{}' 2>/dev/null)"; then
                 if printf '%s' "$init_resp" | grep -qE '"uid"|"status"'; then
