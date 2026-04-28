@@ -16,6 +16,8 @@ Use this skill when the user wants to inspect wallet balances, token holdings, a
 
 Use this skill when the user wants to manage wallet security policies such as chain allowlists, token allowlists, transfer limits, or confirmation thresholds.
 
+Use this skill when the user wants to turn a completed DeFi sequence into a reusable SDK-backed script or a common workflow template.
+
 You can always know how-to-use by Swagger-UI at `{CLAY_SANDBOX_URL}/docs`
 
 # claw wallet skill
@@ -27,6 +29,7 @@ This skill equips an OpenClaw agent with a local multi-chain wallet sandbox.
 - Required local config files: `skills/claw-wallet-test/.env.clay` and `skills/claw-wallet-test/identity.json`
 - Required sandbox connection values: `CLAY_SANDBOX_URL` plus `CLAY_AGENT_TOKEN` or `AGENT_TOKEN`, read from those local files
 - Install method: bootstrap `install.sh` / `install.ps1` from `https://test.clawwallet.cc/skills` into `skills/claw-wallet-test`
+- Companion skills to load together when present: `claw-wallet-basic`, `wallet-chain-explorer`, `claw-wallet-defi-scripts`
 
 ## Privilege safety rule
 
@@ -109,12 +112,32 @@ Use this **exact format** to respond to the user after finishing the install:
 
 - After the user says they completed the bind workflow, tell them: You can use this wallet to transfer, receive, and perform complex DeFi interactions.
 
+## Wallet lock routing rules
+
+- Always inspect `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` before telling the user how to recover a locked wallet.
+- Treat the wallet as **bound / provisioned** when either of these is true:
+  - `relay_user_bound` is `true` and `relay_binding_status` is `valid`
+  - `has_provisioned_share1` is `true`
+  - `status` is `provisioned_waiting_for_pin`
+- For a **bound / provisioned** wallet:
+  - Do **not** ask the user to send their PIN to the agent.
+  - Do **not** ask the user to paste a PIN into chat.
+  - Tell the user to open `https://test.clawwallet.cc/dashboard` and unlock the wallet there.
+- For an **unbound / local** wallet:
+  - If `can_reactivate_locally` is `true`, call `POST {CLAY_SANDBOX_URL}/api/v1/wallet/reactivate`.
+  - Do **not** ask the user for a PIN in this branch.
+  - If reactivation succeeds, continue with the wallet task.
+- If the wallet is unbound and `can_reactivate_locally` is `false`, explain that local reactivation is unavailable in the current sandbox state instead of inventing a PIN flow.
+
 ## Startup rule:
 
 - do not run `clay-sandbox` directly as a long-lived foreground daemon from OpenClaw
 - use `skills/claw-wallet-test/claw-wallet.sh start` / `skills/claw-wallet-test/claw-wallet.ps1 start`
 - use `restart` if the process exists but is unhealthy
 - use `serve` only when you intentionally want a foreground process
+- Do not assume `start` / `restart` has already unlocked the wallet.
+- After `start` / `restart`, inspect `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` and follow the wallet lock routing rules above.
+- For an unbound / local wallet, the agent should still explicitly try `POST {CLAY_SANDBOX_URL}/api/v1/wallet/reactivate` when `can_reactivate_locally` is `true`.
 - If the user wants balances or transaction history, call `POST {CLAY_SANDBOX_URL}/api/v1/wallet/refresh` first, or use `refreshAndAssets` for a fresh balance snapshot.
 
 ### Register and bind (website vs agent)
@@ -195,6 +218,8 @@ We have a list of sandbox API at `{CLAY_SANDBOX_URL}/docs`,
 When `AGENT_TOKEN` is set, authenticated requests require:
 
 `Authorization: Bearer <CLAY_AGENT_TOKEN>`
+
+When `AGENT_TOKEN` is empty in local dev mode, the sandbox allows the same requests without an `Authorization` header.
 
 Use the token value from `.env.clay` or `identity.json` as described in **HTTP authentication (sandbox)** above.
 

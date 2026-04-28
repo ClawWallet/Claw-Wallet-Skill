@@ -2,8 +2,6 @@
 
 Local sandbox wallet skill for OpenClaw and Claude Code agents. Install the sandbox locally, operate through localhost APIs or CLI, and support both local wallets and phase2 remote-managed wallets.
 
-This `README` targets the `dev` test environment. The installer and upgrade flow pull skill code from [`Claw-Wallet-Skill`](https://github.com/ClawWallet/Claw-Wallet-Skill/tree/dev) `dev` and sandbox binaries from [`Claw_Wallet_Bin`](https://github.com/ClawWallet/Claw_Wallet_Bin/tree/dev) `dev`.
-
 ## Claude Code marketplace
 
 This repository is now structured so it can be added as a third-party Claude Code marketplace.
@@ -34,8 +32,8 @@ curl -fsSL https://test.clawwallet.cc/install | bash
 ### Windows PowerShell
 
 ```powershell
-New-Item -ItemType Directory -Path "skills\claw-wallet" -Force | Out-Null
-Set-Location "skills\claw-wallet"
+New-Item -ItemType Directory -Path "skills\claw-wallet-test" -Force | Out-Null
+Set-Location "skills\claw-wallet-test"
 Invoke-WebRequest -Uri "https://test.clawwallet.cc/install.ps1" -OutFile "install.ps1" -UseBasicParsing
 & ".\install.ps1"
 ```
@@ -52,14 +50,14 @@ Then run the installer from the cloned skill directory (or use the curl flow abo
 
 ### Developing from this repo
 
-Run `bash install.sh` or `install.ps1` inside `skills/claw-wallet` with **`CLAW_WALLET_SKIP_SKILL_DOWNLOAD=1`** to keep local `SKILL.md` and wrappers without overwriting them from the CDN.
+Run `bash install.sh` or `install.ps1` inside `skills/claw-wallet-test` with **`CLAW_WALLET_SKIP_SKILL_DOWNLOAD=1`** to keep local `SKILL.md` and wrappers without overwriting them from the CDN.
 
 ## After install
 
 Verify status:
 
 - `GET {CLAY_SANDBOX_URL}/health` — expected: `{"status": "ok"}`
-- `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` — confirm wallet is ready
+- `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` when a token is present; if `AGENT_TOKEN` is empty, local dev mode allows the request without the header — confirm wallet is ready
 
 Token and URL are in `skills/claw-wallet-test/.env.clay`.
 

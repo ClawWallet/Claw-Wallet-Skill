@@ -1,4 +1,4 @@
-﻿---
+---
 name: claw-wallet
 description: "A multi-chain wallet skill for AI agents, with local sandbox signing, secure PIN handling, and configurable risk controls."
 ---
@@ -21,6 +21,18 @@ You can always know how-to-use by Swagger-UI at `{CLAY_SANDBOX_URL}/docs`
 
 This skill equips an OpenClaw agent with a local multi-chain wallet sandbox.
 
+## Registry metadata
+
+- Required local config files: `skills/claw-wallet-test/.env.clay` and `skills/claw-wallet-test/identity.json`
+- Required sandbox connection values: `CLAY_SANDBOX_URL` plus `CLAY_AGENT_TOKEN` or `AGENT_TOKEN`, read from those local files
+- Install method: bootstrap `install.sh` / `install.ps1` from `https://test.clawwallet.cc/skills` into `skills/claw-wallet-test`
+
+## Privilege safety rule
+
+- First-time install and normal `start` / `restart` do not require extra confirmation.
+- Reinstall, upgrade, uninstall, and transaction execution do require explicit user confirmation.
+- Limit writes to the skill workspace under `skills/claw-wallet-test/**`.
+
 1. All wallet-related operations must go through the local sandbox. Use the localhost API or sandbox CLI instead. Open `{CLAY_SANDBOX_URL}/docs` or use --help command. If sandbox is not running, start/restart it first.
 2. Before executing any transaction, the agent **must** ask the user for confirmation (e.g. "Confirm to execute this transaction?"). Do not proceed without explicit user consent.
 
@@ -32,53 +44,59 @@ This skill equips an OpenClaw agent with a local multi-chain wallet sandbox.
 All files live in one directory:
 
 ```
-{your_workspace}/skills/claw-wallet-dev/
+{your_workspace}/skills/claw-wallet-test/
 ```
 
 | Platform | Resolved path |
 |----------|---------------|
-| Linux/macOS | `skills/claw-wallet-dev/` (relative to workspace root) |
-| Windows | `skills\claw-wallet-dev\` (relative to workspace root) |
+| Linux/macOS | `skills/claw-wallet-test/` (relative to workspace root) |
+| Windows | `skills\claw-wallet-test\` (relative to workspace root) |
 
 ### Install
 
-Before cloning or running the installer, first check from the **workspace root** whether **`skills/claw-wallet-dev`** already exists (same path as in **Installation path** below). Use that check to decide whether this is a reuse flow or a new clone flow.
+Before downloading or running the installer, first check from the **workspace root** whether **`skills/claw-wallet-test`** already exists (same path as in **Installation path** below). Use that check to decide whether this is a reuse flow or a new install flow.
 
-- **If it exists:** Do **not** run the git clone or `install.sh` / `install.ps1` bootstrap unless the user explicitly wants a reinstall.
+- **If it exists:** Do **not** run the remote installer or `install.sh` / `install.ps1` bootstrap unless the user explicitly wants a reinstall.
   1. Start the sandbox first.
-     - Linux/macOS: `skills/claw-wallet-dev/claw-wallet.sh start`
-     - Windows: `skills/claw-wallet-dev/claw-wallet.ps1 start`
+     - Linux/macOS: `skills/claw-wallet-test/claw-wallet.sh start`
+     - Windows: `skills/claw-wallet-test/claw-wallet.ps1 start`
      - Use `restart` if the sandbox is unhealthy.
   2. Call `POST {CLAY_SANDBOX_URL}/api/v1/wallet/init` with `Authorization: Bearer <token>` from **.env.clay**.
      - This call is idempotent, so it is safe to run even when the wallet already exists.
   3. Call `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with the same bearer token and get **status**, report to the user with the **status*.
-  4. If `relay_user_bound` is `false` or `relay_binding_status` is not `valid`, report **bind_url** `https://nex-claw.vercel.app/claim/<uid>` to the user, hint them to bind their agent wallet+.
+  4. If `relay_user_bound` is `false` or `relay_binding_status` is not `valid`, report **bind_url** `https://test.clawwallet.cc/claim/<uid>` to the user, hint them to bind their agent wallet+.
   5. **Stop here** after the report. Do not bootstrap again unless the user explicitly asks for reinstall.
 
-- **If it does not exist:** Continue with **Bootstrap (new clone)** below.
+- **If it does not exist:** Continue with **Bootstrap (curl install)** below.
 
-#### Bootstrap (new clone)
+#### Bootstrap (curl install)
 
-Clone this repo into `skills/claw-wallet-dev` under your workspace from the `dev` branch and run the installer. The installer automatically initializes the wallet.
-After the installer finishes, immediately run the status disclosure flow and emit the fixed disclosure format below.
+Skill files are hosted at **`https://test.clawwallet.cc`**. Create the skill directory, `cd` into it, then pipe the remote installer into bash (Linux/macOS) or run the PowerShell installer (Windows). The installer downloads **`SKILL.md`**, **`claw-wallet.sh`** / **`claw-wallet`**, and the sandbox binary, then initializes the wallet.
+
+Do not run reinstall or upgrade automatically. First-time install is allowed without extra confirmation.
 
 Linux/macOS:
 
 ```bash
-mkdir -p skills
-git clone --branch dev --single-branch https://github.com/ClawWallet/Claw-Wallet-Skill.git skills/claw-wallet-dev
-bash skills/claw-wallet-dev/install.sh
+mkdir -p skills/claw-wallet-test
+cd skills/claw-wallet-test
+curl -fsSL https://test.clawwallet.cc/skills/install.sh | bash
 ```
 
-Windows PowerShell:
+Windows PowerShell (from workspace root; run after creating `skills\claw-wallet-test`):
 
 ```powershell
-New-Item -ItemType Directory -Path "skills" -Force | Out-Null
-git clone --branch dev --single-branch https://github.com/ClawWallet/Claw-Wallet-Skill.git "skills/claw-wallet-dev"
-& "skills/claw-wallet-dev/install.ps1"
+New-Item -ItemType Directory -Path "skills\claw-wallet-test" -Force | Out-Null
+Set-Location "skills\claw-wallet-test"
+Invoke-WebRequest -Uri "https://test.clawwallet.cc/skills/install.ps1" -OutFile "install.ps1" -UseBasicParsing
+& ".\install.ps1"
 ```
 
-After install, use `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` — confirm wallet is ready. The response includes **address information** and **uid** (when present). **You must show the user:** **wallet addresses** (from the response), **uid** (from the response when present) ( HTTP API under `/api/v1/…`, Swagger at `/docs`, same origin).  read it only from `.env.clay` / `identity.json` for `Authorization` (see **HTTP authentication (sandbox)** below).
+Optional: override the download host with environment variable **`CLAW_WALLET_BASE_URL`** (defaults to `https://test.clawwallet.cc/skills`).
+
+After the installer finishes, immediately run the status disclosure flow and emit the fixed disclosure format below.
+
+After install, use `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` with `Authorization: Bearer <token>` — confirm wallet is ready. The response includes **address information** and **uid** (when present). **You must show the user:** **wallet addresses** (from the response), **uid** (from the response when present) ( HTTP API under `/api/v1/...`, Swagger at `/docs`, same origin).  read it only from `.env.clay` / `identity.json` for `Authorization` (see **HTTP authentication (sandbox)** below).
 
 Use this **exact format** to respond to the user after finishing the install:
 
@@ -86,25 +104,45 @@ Use this **exact format** to respond to the user after finishing the install:
 - `Addresses: <address map from wallet/status>`
 - `UID: <uid from wallet/status/identity.json>`
 - `AGENT_TOKEN: <agent_token from .env.clay or identity>`
-- Tell the user: To fully control your wallet with a better experience, open `https://nex-claw.vercel.app/claim/<uid>` (substitute `<uid>` with the value from `wallet/status`) to register and bind your sandbox wallet within 15 minutes. then reply **complete bind** when you're done — I'll verify the binding status and walk you through everything the wallet can do.
+- Tell the user: To fully control your wallet with a better experience, open `https://test.clawwallet.cc/claim/<uid>` (substitute `<uid>` with the value from `wallet/status` or `identity.json`) to register and bind your sandbox wallet within 15 minutes. Ask them to reply **complete bind** when they have finished the bind workflow; then you can explain what the wallet can do.
 
 - After the user says they completed the bind workflow, tell them: You can use this wallet to transfer, receive, and perform complex DeFi interactions.
+
+## Wallet lock routing rules
+
+- Always inspect `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` before telling the user how to recover a locked wallet.
+- Treat the wallet as **bound / provisioned** when either of these is true:
+  - `relay_user_bound` is `true` and `relay_binding_status` is `valid`
+  - `has_provisioned_share1` is `true`
+  - `status` is `provisioned_waiting_for_pin`
+- For a **bound / provisioned** wallet:
+  - Do **not** ask the user to send their PIN to the agent.
+  - Do **not** ask the user to paste a PIN into chat.
+  - Tell the user to open `https://test.clawwallet.cc/dashboard` and unlock the wallet there.
+- For an **unbound / local** wallet:
+  - If `can_reactivate_locally` is `true`, call `POST {CLAY_SANDBOX_URL}/api/v1/wallet/reactivate`.
+  - Do **not** ask the user for a PIN in this branch.
+  - If reactivation succeeds, continue with the wallet task.
+- If the wallet is unbound and `can_reactivate_locally` is `false`, explain that local reactivation is unavailable in the current sandbox state instead of inventing a PIN flow.
 
 ## Startup rule:
 
 - do not run `clay-sandbox` directly as a long-lived foreground daemon from OpenClaw
-- use `skills/claw-wallet-dev/claw-wallet.sh start` / `skills/claw-wallet-dev/claw-wallet.ps1 start`
+- use `skills/claw-wallet-test/claw-wallet.sh start` / `skills/claw-wallet-test/claw-wallet.ps1 start`
 - use `restart` if the process exists but is unhealthy
 - use `serve` only when you intentionally want a foreground process
+- Do not assume `start` / `restart` has already unlocked the wallet.
+- After `start` / `restart`, inspect `GET {CLAY_SANDBOX_URL}/api/v1/wallet/status` and follow the wallet lock routing rules above.
+- For an unbound / local wallet, the agent should still explicitly try `POST {CLAY_SANDBOX_URL}/api/v1/wallet/reactivate` when `can_reactivate_locally` is `true`.
 - If the user wants balances or transaction history, call `POST {CLAY_SANDBOX_URL}/api/v1/wallet/refresh` first, or use `refreshAndAssets` for a fresh balance snapshot.
 
 ### Register and bind (website vs agent)
 
-**End users (browser):** Open `https://nex-claw.vercel.app/claim/<uid>` in the browser, substituting `<uid>` with the wallet **uid** from `wallet/status`, to start the bind flow; the `/claim/…` path **must** include that uid (see [Claw Wallet](https://nex-claw.vercel.app/)).
+**End users (browser):** Open `https://test.clawwallet.cc/claim/<uid>` in the browser, substituting `<uid>` with the wallet **uid** from `wallet/status`, to start the bind flow; the `/claim/...` path **must** include that uid (see [Claw Wallet](https://test.clawwallet.cc/)).
 
 **Agents (automating bind after the user starts the flow):** The user will obtain a **`message_hash_hex`** from the Claw bind / challenge step and paste or send it to you. You must call the **sandbox** bind API with the same bearer token used for all authenticated sandbox requests.
 
-1. **Token:** Use **`AGENT_TOKEN`** / **`CLAY_AGENT_TOKEN`** from `skills/claw-wallet-dev/.env.clay` (or `agent_token` in `identity.json`). Send it as:
+1. **Token:** Use **`AGENT_TOKEN`** / **`CLAY_AGENT_TOKEN`** from `skills/claw-wallet-test/.env.clay` (or `agent_token` in `identity.json`). Send it as:
    - `Authorization: Bearer <token>`
 2. **Request:**
    - **Method:** `POST`
@@ -144,7 +182,7 @@ After install or relaunch, verify:
 
 ## HTTP authentication (sandbox)
 
-- **Most** routes under `/api/v1/…` (wallet status, sign, transfer, etc.) require:
+- **Most** routes under `/api/v1/...` (wallet status, sign, transfer, etc.) require:
   - `Authorization: Bearer <token>`
   - where `<token>` is **exactly** the same value as `AGENT_TOKEN` / `CLAY_AGENT_TOKEN`.
 - **Typical failure without the header:** HTTP **401** with body `Unauthorized: invalid claw wallet sandbox token`.
@@ -153,8 +191,8 @@ After install or relaunch, verify:
 
 | Location | Field(s) |
 |----------|-----------|
-| `skills/claw-wallet-dev/.env.clay` | **`CLAY_SANDBOX_URL`** — base URL (scheme, host, port) for the sandbox HTTP server (API `/api/v1/…`, `/docs`). Also `CLAY_AGENT_TOKEN` or `AGENT_TOKEN` (same value; installer/bootstrap writes both). |
-| `skills/claw-wallet-dev/identity.json` | `agent_token` |
+| `skills/claw-wallet-test/.env.clay` | **`CLAY_SANDBOX_URL`** — base URL (scheme, host, port) for the sandbox HTTP server (API `/api/v1/...`, `/docs`). Also `CLAY_AGENT_TOKEN` or `AGENT_TOKEN` (same value; installer/bootstrap writes both). |
+| `skills/claw-wallet-test/identity.json` | `agent_token` |
 
 Example workspace test layout (same idea):
 
@@ -177,6 +215,8 @@ When `AGENT_TOKEN` is set, authenticated requests require:
 
 `Authorization: Bearer <CLAY_AGENT_TOKEN>`
 
+When `AGENT_TOKEN` is empty in local dev mode, the sandbox allows the same requests without an `Authorization` header.
+
 Use the token value from `.env.clay` or `identity.json` as described in **HTTP authentication (sandbox)** above.
 
 You can Open `{CLAY_SANDBOX_URL}/docs` to see the list of our API and how to use.
@@ -185,21 +225,22 @@ You can Open `{CLAY_SANDBOX_URL}/docs` to see the list of our API and how to use
 
 ### Upgrade
 
-- **If installed via git clone:** `git stash` → `git pull` → `git stash pop`, then rerun the installer. Local changes are preserved.
-- **If installed via npx skills add (no `.git`):** Backs up `.env.clay`/`identity.json`/`share3.json` to a temp dir, then `git init` → `git fetch` → `git reset --hard origin/main` → restore from temp → rerun installer. After the first upgrade, `.git` exists so future upgrades use the normal git flow.
+Re-download **`SKILL.md`**, wrapper scripts, and the sandbox binary from **`CLAW_WALLET_BASE_URL`** (default `https://test.clawwallet.cc/skills`) by running **`upgrade`** on the wrapper. Wallet data (`.env.clay`, `identity.json`, `share3.json`) is preserved.
 
-Wallet data (`.env.clay`, `identity.json`, `share3.json`) is preserved in both cases.
+Ask the user for confirmation before upgrade, because it rewrites files in `skills/claw-wallet-test/**` and may restart the sandbox environment.
+
+Linux/macOS: the wrapper runs `curl -fsSL .../skills/install.sh | bash` with `CLAW_WALLET_SKIP_INIT=1`. Windows: downloads and runs **`/skills/install.ps1`** from the same host.
 
 Linux/macOS:
 
 ```bash
-skills/claw-wallet-dev/claw-wallet.sh upgrade
+skills/claw-wallet-test/claw-wallet.sh upgrade
 ```
 
 Windows PowerShell:
 
 ```powershell
-& "skills/claw-wallet-dev/claw-wallet.ps1" upgrade
+& "skills/claw-wallet-test/claw-wallet.ps1" upgrade
 ```
 
 ### Uninstall
@@ -220,13 +261,13 @@ The uninstall script will:
 Linux/macOS:
 
 ```bash
-bash skills/claw-wallet-dev/claw-wallet.sh uninstall
+bash skills/claw-wallet-test/claw-wallet.sh uninstall
 ```
 
 Windows PowerShell:
 
 ```powershell
-& "skills/claw-wallet-dev/claw-wallet.ps1" uninstall
+& "skills/claw-wallet-test/claw-wallet.ps1" uninstall
 ```
 
 ## CLI and Manage
@@ -235,9 +276,9 @@ Use the wrapper scripts to either manage the sandbox process or call the binary 
 
 Public wrapper entrypoints:
 
-- Linux/macOS: `skills/claw-wallet-dev/claw-wallet.sh`
-- Windows CMD: `skills\claw-wallet-dev\claw-wallet.cmd`
-- Windows PowerShell: `& "skills/claw-wallet-dev/claw-wallet.ps1"`
+- Linux/macOS: `skills/claw-wallet-test/claw-wallet.sh`
+- Windows CMD: `skills\claw-wallet-test\claw-wallet.cmd`
+- Windows PowerShell: `& "skills/claw-wallet-test/claw-wallet.ps1"`
 
 Process management:
 
@@ -245,7 +286,7 @@ Process management:
 - `stop` stops the sandbox
 - `restart` stops and then starts again
 - `is-running` exits `0` when the sandbox is running, `1` otherwise
-- `upgrade` pulls the latest code (git or npx skills update) and reruns the installer
+- `upgrade` re-downloads skill files and the sandbox binary from the configured host and reruns the installer (no git)
 - `uninstall` stops the sandbox, asks for confirmation, and removes the skill directory
 
 CLI commands:
@@ -258,7 +299,6 @@ CLI commands:
 - `refreshAndAssets` prints a fresh balance snapshot by combining refresh + assets in one request
 - `prices` prints the oracle price cache
 - `security` prints the security and risk cache
-
 - `audit [number]` prints recent audit log entries
 - `refresh` triggers an async asset refresh through `POST /api/v1/wallet/refresh`
 - `broadcast signed-tx.json` broadcasts a signed transaction payload
@@ -268,9 +308,9 @@ CLI commands:
 
 Windows equivalents use the same subcommands through `claw-wallet.ps1`, for example:
 
-- `& "skills/claw-wallet-dev/claw-wallet.ps1" help`
-- `& "skills/claw-wallet-dev/claw-wallet.ps1" status --short`
-- `Get-Content policy.json | & "skills/claw-wallet-dev/claw-wallet.ps1" policy set -`
+- `& "skills/claw-wallet-test/claw-wallet.ps1" help`
+- `& "skills/claw-wallet-test/claw-wallet.ps1" status --short`
+- `Get-Content policy.json | & "skills/claw-wallet-test/claw-wallet.ps1" policy set -`
 
 Help and usage:
 
@@ -291,11 +331,3 @@ Use refresh only when it protects correctness:
 - If you need a fresh snapshot immediately after refresh, prefer `refreshAndAssets` instead of `assets` alone.
 - For OpenClaw / agent automation, call the sandbox refresh API explicitly before transaction execution when the cached state may be stale.
 - Do not refresh on every read. Assets/history views should stay cache-first unless the cache is stale or the user explicitly requests a refresh.
-
-## Marketplace Skills
-
-For non-wallet capabilities:
-
-1. Try local market: `GET {CLAY_SANDBOX_URL}/api/v1/skills/by-name?name=<skill-name>`.
-2. If found: `GET {CLAY_SANDBOX_URL}/api/v1/skills/read?name=<skill-name>` and use `content`.
-3. If not found: `GET https://www.openclawby.com/api/skills?q=<skill-name>&sort=rating&page=1&page_size=16`, pick `skills[0]`, run its `installMethods[0]command`, then retry step 1-2.

@@ -32,11 +32,85 @@ if ($env:CLAW_WALLET_SKIP_SKILL_DOWNLOAD -ne "1") {
 
 $BinaryUrl = "$BaseUrl/bin/clay-sandbox-windows-amd64.exe"
 $BinaryTarget = Join-Path $ScriptDir "clay-sandbox.exe"
+$PidPath = Join-Path $ScriptDir "sandbox.pid"
+$LogPath = Join-Path $ScriptDir "sandbox.log"
+$ErrLogPath = Join-Path $ScriptDir "sandbox_err.log"
+
+function Get-RunningSandboxPid {
+    if (-not (Test-Path $PidPath)) { return $null }
+    try {
+        $raw = (Get-Content -Path $PidPath -TotalCount 1 -ErrorAction SilentlyContinue)
+        $pidValue = "$raw".Trim()
+        if (-not $pidValue) { return $null }
+        $pidInt = [int]$pidValue
+        $proc = Get-Process -Id $pidInt -ErrorAction SilentlyContinue
+        if ($proc) { return $pidInt }
+    } catch {
+    }
+    try { Remove-Item -Path $PidPath -Force -ErrorAction SilentlyContinue } catch { }
+    return $null
+}
+
+function Prepare-LogPaths {
+    try {
+        if (-not (Test-Path $ScriptDir)) { New-Item -ItemType Directory -Path $ScriptDir -Force | Out-Null }
+        if (Test-Path $LogPath) { Remove-Item -Path $LogPath -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $ErrLogPath) { Remove-Item -Path $ErrLogPath -Force -ErrorAction SilentlyContinue }
+        New-Item -ItemType File -Path $LogPath -Force | Out-Null
+        New-Item -ItemType File -Path $ErrLogPath -Force | Out-Null
+        return
+    } catch {
+    }
+    $baseTemp = $env:TEMP
+    if (-not $baseTemp) {
+        $baseTemp = Join-Path $env:SystemRoot "Temp"
+    }
+    $fallbackDir = Join-Path $baseTemp "claw-wallet"
+    New-Item -ItemType Directory -Path $fallbackDir -Force | Out-Null
+    $script:LogPath = Join-Path $fallbackDir "sandbox.log"
+    $script:ErrLogPath = Join-Path $fallbackDir "sandbox_err.log"
+    New-Item -ItemType File -Path $LogPath -Force | Out-Null
+    New-Item -ItemType File -Path $ErrLogPath -Force | Out-Null
+    Write-Host "Warning: could not use logs in $ScriptDir; using fallback logs in $fallbackDir"
+}
+
+function Start-Sandbox {
+    $runningPid = Get-RunningSandboxPid
+    if ($runningPid) {
+        Write-Host "claw wallet sandbox is already running."
+        Write-Host "PID file: $PidPath"
+        Write-Host "Log files: $LogPath , $ErrLogPath"
+        return
+    }
+
+    Prepare-LogPaths
+    $proc = Start-Process -FilePath $BinaryTarget -ArgumentList @("serve") -WorkingDirectory $ScriptDir -RedirectStandardOutput $LogPath -RedirectStandardError $ErrLogPath -WindowStyle Hidden -PassThru
+    if ($proc -and $proc.Id) {
+        Set-Content -Path $PidPath -Value $proc.Id -Encoding ascii
+    }
+    Write-Host "claw wallet sandbox launched in the background."
+    Write-Host "PID file: $PidPath"
+    Write-Host "Log files: $LogPath , $ErrLogPath"
+    if (Test-Path (Join-Path $ScriptDir ".env.clay")) {
+        Write-Host "API auth: if HTTP returns 401, send header Authorization: Bearer <token> using AGENT_TOKEN from .env.clay . See SKILL.md."
+    }
+}
+
+function Stop-Sandbox {
+    $runningPid = Get-RunningSandboxPid
+    if ($runningPid) {
+        try { Stop-Process -Id $runningPid -Force -ErrorAction SilentlyContinue } catch { }
+    }
+    if (Test-Path $BinaryTarget) {
+        try { & $BinaryTarget stop *> $null } catch { }
+    }
+    try { Remove-Item -Path $PidPath -Force -ErrorAction SilentlyContinue } catch { }
+}
 
 # --- Common: stop, download, start ---
 $SkipStop = $env:CLAW_WALLET_SKIP_STOP -eq "1"
 if (-not $SkipStop) {
-    & (Join-Path $ScriptDir "claw-wallet.ps1") stop *> $null
+    Stop-Sandbox
 }
 
 Write-Host "Downloading sandbox binary from $BinaryUrl ..."
@@ -44,7 +118,7 @@ $TempBinary = "$BinaryTarget.download"
 Invoke-WebRequest -Uri $BinaryUrl -OutFile $TempBinary -UseBasicParsing
 Move-Item -Path $TempBinary -Destination $BinaryTarget -Force
 
-& (Join-Path $ScriptDir "claw-wallet.ps1") start
+Start-Sandbox
 
 # --- First-time only: wallet init (skipped when upgrade passes CLAW_WALLET_SKIP_INIT=1) ---
 function Do-WalletInit {
@@ -57,20 +131,34 @@ function Do-WalletInit {
             $lines = Get-Content $envClayPath -ErrorAction SilentlyContinue
             foreach ($line in $lines) {
                 if ($line -match '^CLAY_SANDBOX_URL=(.+)$') { $sandboxUrl = $matches[1].Trim().Trim('"').Trim("'").TrimEnd() }
-                if ($line -match '^(CLAY_AGENT_TOKEN|AGENT_TOKEN)=(.+)$') { $agentToken = $matches[2].Trim().Trim('"').Trim("'").TrimEnd() }
+                if ($line -match '^(AGENT_TOKEN)=(.+)$') { $agentToken = $matches[2].Trim().Trim('"').Trim("'").TrimEnd() }
             }
         }
         if ($sandboxUrl) {
             try {
                 $health = Invoke-RestMethod -Uri "$sandboxUrl/health" -Method Get -ErrorAction Stop
-                if ($health.status -eq "ok" -and $agentToken) {
-                    $headers = @{
-                        "Authorization" = "Bearer $agentToken"
-                        "Content-Type" = "application/json"
+                if ($health.status -eq "ok") {
+                    $initParams = @{
+                        Uri         = "$sandboxUrl/api/v1/wallet/init"
+                        Method      = "Post"
+                        Body        = "{}"
+                        ErrorAction = "Stop"
                     }
-                    $initResp = Invoke-RestMethod -Uri "$sandboxUrl/api/v1/wallet/init" -Method Post -Headers $headers -Body "{}" -ErrorAction Stop
+                    if ($agentToken) {
+                        $initParams["Headers"] = @{
+                            "Authorization" = "Bearer $agentToken"
+                            "Content-Type"  = "application/json"
+                        }
+                    } else {
+                        $initParams["Headers"] = @{
+                            "Content-Type" = "application/json"
+                        }
+                    }
+                    $initResp = Invoke-RestMethod @initParams
                     if ($initResp) {
                         Write-Host "Wallet initialized."
+                    } else {
+                        Write-Host "Wallet init request completed."
                     }
                     return
                 }
@@ -80,7 +168,7 @@ function Do-WalletInit {
         }
         Start-Sleep -Seconds 1
     }
-    Write-Host "Warning: health not ok or .env.clay not ready after 90s. Check sandbox.log, then run POST {CLAY_SANDBOX_URL}/api/v1/wallet/init manually. See SKILL.md."
+    Write-Host "Warning: health not ok or .env.clay not ready after 90s. Check sandbox.log, then run POST {CLAY_SANDBOX_URL}/api/v1/wallet/init manually. If AGENT_TOKEN is empty, local dev mode allows the request without Authorization. See SKILL.md."
 }
 
 if ($env:CLAW_WALLET_SKIP_INIT -ne "1") {
@@ -88,9 +176,6 @@ if ($env:CLAW_WALLET_SKIP_INIT -ne "1") {
 }
 
 # --- Common: final messages ---
-Write-Host "Check .env.clay for CLAY_SANDBOX_URL and CLAY_AGENT_TOKEN (or AGENT_TOKEN)."
-Write-Host "HTTP clients (curl, agents) must call protected APIs with: Authorization: Bearer <same token>."
-Write-Host "The same value is duplicated in identity.json as agent_token. See SKILL.md section 'HTTP authentication (sandbox)'."
-Write-Host "Sandbox binary refreshed at: $BinaryTarget"
-
-# Identity and config are persistent. To reset, delete .env.clay, identity.json and share3.json.
+Write-Host "Check .env.clay for CLAY_SANDBOX_URL"
+Write-Host "If you have set an AGENT_TOKEN, then HTTP clients (curl, agents) must call protected APIs with: Authorization: Bearer <same token>."
+Write-Host "Sandbox start success. at: $BinaryTarget"
