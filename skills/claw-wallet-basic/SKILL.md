@@ -58,8 +58,8 @@ Before downloading or running the installer, first check from the **workspace ro
 
 - **If it exists:** Do **not** run the remote installer or `install.sh` / `install.ps1` bootstrap unless the user explicitly wants a reinstall.
   1. Start the sandbox first.
-     - Linux/macOS: `skills/claw-wallet-test/claw-wallet.sh start`
-     - Windows: `skills/claw-wallet-test/claw-wallet.ps1 start`
+     - Linux/macOS: `bash skills/claw-wallet-test/install.sh start`
+     - Windows: `& "skills/claw-wallet-test/install.ps1" start`
      - Use `restart` if the sandbox is unhealthy.
   2. Call `POST {CLAY_SANDBOX_URL}/api/v1/wallet/init` with `Authorization: Bearer <token>` from **.env.clay**.
      - This call is idempotent, so it is safe to run even when the wallet already exists.
@@ -71,7 +71,7 @@ Before downloading or running the installer, first check from the **workspace ro
 
 #### Bootstrap (curl install)
 
-Skill files are hosted at **`https://test.clawwallet.cc`**. Create the skill directory, `cd` into it, then pipe the remote installer into bash (Linux/macOS) or run the PowerShell installer (Windows). The installer downloads **`SKILL.md`**, **`claw-wallet.sh`** / **`claw-wallet`**, and the sandbox binary, then initializes the wallet.
+Skill files are hosted at **`https://test.clawwallet.cc`**. Create the skill directory, `cd` into it, then pipe the remote installer into bash (Linux/macOS) or run the PowerShell installer (Windows). The installer downloads **`SKILL.md`**, **`install.sh`** / **`install.ps1`**, compatibility wrappers, and the sandbox binary, then initializes the wallet.
 
 Do not run reinstall or upgrade automatically. First-time install is allowed without extra confirmation.
 
@@ -128,7 +128,7 @@ Use this **exact format** to respond to the user after finishing the install:
 ## Startup rule:
 
 - do not run `clay-sandbox` directly as a long-lived foreground daemon from OpenClaw
-- use `skills/claw-wallet-test/claw-wallet.sh start` / `skills/claw-wallet-test/claw-wallet.ps1 start`
+- use `bash skills/claw-wallet-test/install.sh start` / `& "skills/claw-wallet-test/install.ps1" start`
 - use `restart` if the process exists but is unhealthy
 - use `serve` only when you intentionally want a foreground process
 - Do not assume `start` / `restart` has already unlocked the wallet.
@@ -225,22 +225,25 @@ You can Open `{CLAY_SANDBOX_URL}/docs` to see the list of our API and how to use
 
 ### Upgrade
 
-Re-download **`SKILL.md`**, wrapper scripts, and the sandbox binary from **`CLAW_WALLET_BASE_URL`** (default `https://test.clawwallet.cc/skills`) by running **`upgrade`** on the wrapper. Wallet data (`.env.clay`, `identity.json`, `share3.json`) is preserved.
+Re-download **`SKILL.md`**, the local install entrypoint, compatibility wrappers, and the sandbox binary from **`CLAW_WALLET_BASE_URL`** (default `https://test.clawwallet.cc`) by running **`upgrade`** on `install.sh` / `install.ps1`. Wallet data (`.env.clay`, `identity.json`, `share3.json`) is preserved.
 
 Ask the user for confirmation before upgrade, because it rewrites files in `skills/claw-wallet-test/**` and may restart the sandbox environment.
 
-Linux/macOS: the wrapper runs `curl -fsSL .../skills/install.sh | bash` with `CLAW_WALLET_SKIP_INIT=1`. Windows: downloads and runs **`/skills/install.ps1`** from the same host.
+The same local entrypoint is used for first install and day-2 operations:
+- No argument: first install flow, including wallet initialization
+- `upgrade`: re-download files and binary, but skip wallet initialization
+- `start` / `restart` / `stop` / `is-running` / `serve` / `uninstall`: runtime management commands
 
 Linux/macOS:
 
 ```bash
-skills/claw-wallet-test/claw-wallet.sh upgrade
+bash skills/claw-wallet-test/install.sh upgrade
 ```
 
 Windows PowerShell:
 
 ```powershell
-& "skills/claw-wallet-test/claw-wallet.ps1" upgrade
+& "skills/claw-wallet-test/install.ps1" upgrade
 ```
 
 ### Uninstall
@@ -261,24 +264,24 @@ The uninstall script will:
 Linux/macOS:
 
 ```bash
-bash skills/claw-wallet-test/claw-wallet.sh uninstall
+bash skills/claw-wallet-test/install.sh uninstall
 ```
 
 Windows PowerShell:
 
 ```powershell
-& "skills/claw-wallet-test/claw-wallet.ps1" uninstall
+& "skills/claw-wallet-test/install.ps1" uninstall
 ```
 
 ## CLI and Manage
 
-Use the wrapper scripts to either manage the sandbox process or call the binary CLI.
+Use the local install entrypoint to either manage the sandbox process or call the binary CLI. Compatibility wrappers still exist, but prefer `install.sh` / `install.ps1`.
 
-Public wrapper entrypoints:
+Primary entrypoints:
 
-- Linux/macOS: `skills/claw-wallet-test/claw-wallet.sh`
-- Windows CMD: `skills\claw-wallet-test\claw-wallet.cmd`
-- Windows PowerShell: `& "skills/claw-wallet-test/claw-wallet.ps1"`
+- Linux/macOS: `bash skills/claw-wallet-test/install.sh`
+- Windows CMD: `powershell -NoProfile -ExecutionPolicy Bypass -File "skills\claw-wallet-test\install.ps1"`
+- Windows PowerShell: `& "skills/claw-wallet-test/install.ps1"`
 
 Process management:
 
@@ -306,16 +309,16 @@ CLI commands:
 - `policy get` prints the local `policy.json` via **`GET /api/v1/policy/local`** (read-only). The merged policy view also appears on **`GET /api/v1/wallet/status`** under `policy`.
 - Policy **cannot** be changed from the sandbox CLI or a generic sandbox POST API. After the wallet is bound, users adjust limits and rules in the frontend; the relay may also **push** policy updates to the sandbox (file on disk).
 
-Windows equivalents use the same subcommands through `claw-wallet.ps1`, for example:
+Windows equivalents use the same subcommands through `install.ps1`, for example:
 
-- `& "skills/claw-wallet-test/claw-wallet.ps1" help`
-- `& "skills/claw-wallet-test/claw-wallet.ps1" status --short`
-- `Get-Content policy.json | & "skills/claw-wallet-test/claw-wallet.ps1" policy set -`
+- `& "skills/claw-wallet-test/install.ps1" help`
+- `& "skills/claw-wallet-test/install.ps1" status --short`
+- `Get-Content policy.json | & "skills/claw-wallet-test/install.ps1" policy set -`
 
 Help and usage:
 
 - `help`, `-h`, and `--help` are equivalent for the sandbox binary
-- These flags print the built-in CLI usage text from the binary itself, not a wrapper-specific summary
+- These flags print the built-in CLI usage text from the binary itself, not an install-script-specific summary
 - The help output is grouped by area: server, wallet read commands, policy, transaction helpers, and local bootstrap / utility commands
 - Wallet read commands are thin wrappers over the local HTTP API and still require the bearer token from `.env.clay` / `identity.json`
 - Running the binary with no subcommand starts the HTTP server, so use `help` explicitly when you want usage text instead of a foreground daemon

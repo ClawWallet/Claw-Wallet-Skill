@@ -1,10 +1,8 @@
 #!/bin/bash
-# claw wallet minimal installer for Linux/macOS
-# Served at: https://test.clawwallet.cc/skills/install.sh  (curl -fsSL ... | bash)
-# Usage: first-time install (wallet init) | upgrade (CLAW_WALLET_SKIP_INIT=1, no wallet init)
+# claw wallet unified installer and runtime entrypoint for Linux/macOS
+# Served at: https://test.clawwallet.cc/skills/install.sh
 set -euo pipefail
 
-# Piped from curl: BASH_SOURCE is "-"; use cwd (user should: mkdir -p skills/claw-wallet-test && cd skills/claw-wallet-test)
 if [[ "${BASH_SOURCE[0]:-}" == "-" ]]; then
     SCRIPT_DIR="$(pwd -P)"
 else
@@ -13,25 +11,14 @@ fi
 cd "$SCRIPT_DIR"
 
 CLAW_WALLET_BASE_URL="${CLAW_WALLET_BASE_URL:-https://test.clawwallet.cc}"
-
-download_skill_bundle() {
-    echo "Downloading SKILL.md and wrapper scripts from ${CLAW_WALLET_BASE_URL} ..."
-    curl -fsSL "${CLAW_WALLET_BASE_URL}/skills/SKILL.md" -o SKILL.md
-    curl -fsSL "${CLAW_WALLET_BASE_URL}/skills/claw-wallet.sh" -o claw-wallet.sh
-    curl -fsSL "${CLAW_WALLET_BASE_URL}/skills/claw-wallet" -o claw-wallet
-    chmod +x claw-wallet.sh claw-wallet
-}
-
-if [[ "${CLAW_WALLET_SKIP_SKILL_DOWNLOAD:-0}" != "1" ]]; then
-    download_skill_bundle
-fi
+COMMAND="${1:-install}"
 
 OS_TYPE="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH_TYPE="$(uname -m)"
 
 BINARY_NAME="clay-sandbox-linux-amd64"
-if [ "$OS_TYPE" = "darwin" ]; then
-    if [ "$ARCH_TYPE" = "arm64" ]; then
+if [[ "$OS_TYPE" == "darwin" ]]; then
+    if [[ "$ARCH_TYPE" == "arm64" ]]; then
         BINARY_NAME="clay-sandbox-darwin-arm64"
     else
         BINARY_NAME="clay-sandbox-darwin-amd64"
@@ -39,18 +26,40 @@ if [ "$OS_TYPE" = "darwin" ]; then
 fi
 
 BINARY_URL="${CLAW_WALLET_BASE_URL}/bin/${BINARY_NAME}"
-BINARY_TARGET="./clay-sandbox"
+BINARY_PATH="$SCRIPT_DIR/clay-sandbox"
 PID_PATH="$SCRIPT_DIR/sandbox.pid"
 LOG_PATH="$SCRIPT_DIR/sandbox.log"
 ERR_LOG_PATH="$SCRIPT_DIR/sandbox_err.log"
 
+download_file() {
+    local url="$1"
+    local target="$2"
+    local tmp_target="${target}.download"
+    curl -fsSL "$url" -o "$tmp_target"
+    mv -f "$tmp_target" "$target"
+}
+
+download_skill_bundle() {
+    echo "Downloading skill files from ${CLAW_WALLET_BASE_URL} ..."
+    download_file "${CLAW_WALLET_BASE_URL}/skills/SKILL.md" "$SCRIPT_DIR/SKILL.md"
+    download_file "${CLAW_WALLET_BASE_URL}/skills/install.sh" "$SCRIPT_DIR/install.sh"
+    download_file "${CLAW_WALLET_BASE_URL}/skills/claw-wallet.sh" "$SCRIPT_DIR/claw-wallet.sh"
+    chmod +x "$SCRIPT_DIR/install.sh" "$SCRIPT_DIR/claw-wallet.sh"
+}
+
+download_binary() {
+    echo "Downloading sandbox binary from $BINARY_URL ..."
+    download_file "$BINARY_URL" "$BINARY_PATH"
+    chmod +x "$BINARY_PATH"
+}
+
 get_running_sandbox_pid() {
-    if [ ! -f "$PID_PATH" ]; then
+    if [[ ! -f "$PID_PATH" ]]; then
         return 1
     fi
     local pid_value
     pid_value="$(head -n 1 "$PID_PATH" 2>/dev/null | tr -d '[:space:]' || true)"
-    if [ -z "$pid_value" ]; then
+    if [[ -z "$pid_value" ]]; then
         return 1
     fi
     if kill -0 "$pid_value" 2>/dev/null; then
@@ -90,17 +99,22 @@ start_sandbox() {
         return 0
     fi
 
+    if [[ ! -x "$BINARY_PATH" ]]; then
+        echo "claw wallet sandbox is not installed. Expected binary at: $BINARY_PATH"
+        echo "Run: $SCRIPT_DIR/install.sh"
+        return 1
+    fi
+
     prepare_log_paths
-    nohup "$BINARY_TARGET" serve </dev/null >>"$LOG_PATH" 2>>"$ERR_LOG_PATH" &
-    
+    nohup "$BINARY_PATH" serve </dev/null >>"$LOG_PATH" 2>>"$ERR_LOG_PATH" &
     local proc_pid=$!
     disown "$proc_pid" 2>/dev/null || true
     echo "$proc_pid" >"$PID_PATH"
     echo "claw wallet sandbox launched in the background."
     echo "PID file: $PID_PATH"
     echo "Log files: $LOG_PATH , $ERR_LOG_PATH"
-    if [ -f "$SCRIPT_DIR/.env.clay" ]; then
-        echo "API auth: if HTTP returns 401, send header Authorization: Bearer <token> using AGENT_TOKEN from .env.clay. See SKILL.md."
+    if [[ -f "$SCRIPT_DIR/.env.clay" ]]; then
+        echo "API auth: if HTTP returns 401, send header Authorization: Bearer <token> using AGENT_TOKEN or CLAY_AGENT_TOKEN from .env.clay (or agent_token in identity.json). See SKILL.md."
     fi
 }
 
@@ -112,27 +126,12 @@ stop_sandbox() {
             kill "$running_pid" 2>/dev/null || true
         fi
     fi
-    if [ -x "$BINARY_TARGET" ]; then
-        "$BINARY_TARGET" stop >/dev/null 2>&1 || true
+    if [[ -x "$BINARY_PATH" ]]; then
+        "$BINARY_PATH" stop >/dev/null 2>&1 || true
     fi
     rm -f "$PID_PATH"
 }
 
-# --- Common: stop, download, start ---
-if [ "${CLAW_WALLET_SKIP_STOP:-0}" != "1" ]; then
-    stop_sandbox
-fi
-
-echo "Downloading sandbox binary from $BINARY_URL ..."
-TMP_TARGET="${BINARY_TARGET}.download"
-curl -L -o "$TMP_TARGET" "$BINARY_URL"
-mv -f "$TMP_TARGET" "$BINARY_TARGET"
-
-chmod +x "$BINARY_TARGET"
-
-start_sandbox
-
-# --- First-time only: wallet init (skipped when upgrade passes CLAW_WALLET_SKIP_INIT=1) ---
 read_env_value() {
     local pattern="$1"
     local file="$2"
@@ -196,11 +195,94 @@ do_wallet_init() {
     return 1
 }
 
-if [ "${CLAW_WALLET_SKIP_INIT:-0}" != "1" ]; then
-    do_wallet_init
-fi
+print_final_messages() {
+    echo "Check .env.clay for CLAY_SANDBOX_URL"
+    echo "If you have set an AGENT_TOKEN, then HTTP clients (curl, agents) must call protected APIs with: Authorization: Bearer <same token>."
+    echo "Sandbox start success. at: $BINARY_PATH"
+}
 
-# --- Common: final messages ---
-echo "Check .env.clay for CLAY_SANDBOX_URL"
-echo "If you have set an AGENT_TOKEN, then HTTP clients (curl, agents) must call protected APIs with: Authorization: Bearer <same token>."
-echo "Sandbox start success. at: $BINARY_TARGET"
+install_or_upgrade() {
+    local should_init="$1"
+    stop_sandbox
+    download_skill_bundle
+    download_binary
+    start_sandbox
+    if [[ "$should_init" == "1" ]]; then
+        do_wallet_init
+    fi
+    print_final_messages
+}
+
+uninstall_skill() {
+    stop_sandbox
+    echo
+    echo "=== WARNING: Uninstall claw-wallet skill ==="
+    echo "This will DELETE the entire skill directory and all wallet data."
+    echo "Files to be removed: .env.clay, identity.json, share3.json, and all others."
+    echo "This action is IRREVERSIBLE. Please backup .env.clay, identity.json, share3.json first if needed."
+    echo
+    local confirm=""
+    read -r -p "Type 'yes' to confirm uninstall: " confirm
+    if [[ "$confirm" != "yes" ]]; then
+        echo "Uninstall cancelled."
+        return 0
+    fi
+    echo "Removing $SCRIPT_DIR ..."
+    local parent_dir
+    parent_dir="$(dirname "$SCRIPT_DIR")"
+    cd "$parent_dir"
+    rm -rf "$SCRIPT_DIR"
+    echo "claw-wallet skill has been uninstalled."
+}
+
+case "$COMMAND" in
+    ""|install)
+        install_or_upgrade 1
+        ;;
+    upgrade)
+        install_or_upgrade 0
+        ;;
+    start)
+        start_sandbox
+        ;;
+    restart)
+        stop_sandbox
+        sleep 1
+        start_sandbox
+        ;;
+    stop)
+        stop_sandbox
+        echo "claw wallet sandbox stop requested."
+        ;;
+    is-running)
+        if get_running_sandbox_pid >/dev/null; then
+            echo "claw wallet sandbox is running."
+            exit 0
+        fi
+        echo "claw wallet sandbox is not running."
+        exit 1
+        ;;
+    uninstall)
+        uninstall_skill
+        ;;
+    serve)
+        shift || true
+        if [[ ! -x "$BINARY_PATH" ]]; then
+            echo "claw wallet sandbox is not installed. Expected binary at: $BINARY_PATH"
+            echo "Run: $SCRIPT_DIR/install.sh"
+            exit 1
+        fi
+        if [[ $# -gt 0 ]]; then
+            exec "$BINARY_PATH" serve "$@"
+        fi
+        exec "$BINARY_PATH" serve
+        ;;
+    *)
+        if [[ ! -x "$BINARY_PATH" ]]; then
+            echo "claw wallet sandbox is not installed. Expected binary at: $BINARY_PATH"
+            echo "Run: $SCRIPT_DIR/install.sh"
+            exit 1
+        fi
+        exec "$BINARY_PATH" "$@"
+        ;;
+esac

@@ -17,7 +17,7 @@ This is a community marketplace setup, not an Anthropic-curated listing. To appe
 
 ## Installation
 
-Skill assets are hosted at **`https://test.clawwallet.cc`**. Deploy that site so these paths exist: **`/install`** (same body as `install.sh`), **`/install.ps1`**, **`/SKILL.md`**, **`/claw-wallet.sh`**, **`/claw-wallet`**, **`/claw-wallet.ps1`**, **`/claw-wallet.cmd`**, and **`/bin/<platform binary>`**.
+Skill assets are hosted at **`https://test.clawwallet.cc`**. Deploy that site so these paths exist: **`/skills/install.sh`**, **`/skills/install.ps1`**, **`/skills/SKILL.md`**, **`/skills/claw-wallet.sh`**, **`/skills/claw-wallet`**, **`/skills/claw-wallet.ps1`**, **`/skills/claw-wallet.cmd`**, and **`/bin/<platform binary>`**.
 
 ### Linux / macOS (recommended)
 
@@ -26,7 +26,7 @@ From the workspace root:
 ```bash
 mkdir -p skills/claw-wallet-test
 cd skills/claw-wallet-test
-curl -fsSL https://test.clawwallet.cc/install | bash
+curl -fsSL https://test.clawwallet.cc/skills/install.sh | bash
 ```
 
 ### Windows PowerShell
@@ -50,7 +50,11 @@ Then run the installer from the cloned skill directory (or use the curl flow abo
 
 ### Developing from this repo
 
-Run `bash install.sh` or `install.ps1` inside `skills/claw-wallet-test` with **`CLAW_WALLET_SKIP_SKILL_DOWNLOAD=1`** to keep local `SKILL.md` and wrappers without overwriting them from the CDN.
+`install.sh` and `install.ps1` are now the unified local entrypoints.
+
+- No argument: install flow, including wallet initialization
+- `upgrade`: refresh skill files and binary without re-running wallet init
+- `start` / `restart` / `stop` / `is-running` / `serve` / `uninstall`: runtime management commands
 
 ## After install
 
