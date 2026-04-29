@@ -11,7 +11,7 @@ if ($env:CLAW_WALLET_INSTALL_DIR -and [string]::IsNullOrEmpty($Command)) {
 }
 Set-Location -Path $ScriptDir
 
-$BaseUrl = if ($env:CLAW_WALLET_BASE_URL) { $env:CLAW_WALLET_BASE_URL } else { "https://test.clawwallet.cc" }
+$BaseUrl = "https://test.clawwallet.cc"
 
 $BinaryUrl = "$BaseUrl/bin/clay-sandbox-windows-amd64.exe"
 $BinaryPath = Join-Path $ScriptDir "clay-sandbox.exe"

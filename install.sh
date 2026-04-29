@@ -18,7 +18,7 @@ fi
 
 cd "$SCRIPT_DIR"
 
-CLAW_WALLET_BASE_URL="${CLAW_WALLET_BASE_URL:-https://test.clawwallet.cc}"
+CLAW_WALLET_BASE_URL="https://test.clawwallet.cc"
 
 OS_TYPE="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH_TYPE="$(uname -m)"
