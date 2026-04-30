@@ -96,7 +96,7 @@ Invoke-WebRequest -Uri "https://test.clawwallet.cc/skills/install.ps1" -OutFile 
 & ".\install.ps1"
 ```
 
-Optional: override the download host with environment variable **`CLAW_WALLET_BASE_URL`** (defaults to `https://test.clawwallet.cc/skills`).
+Optional: override the download host with environment variable **`CLAW_WALLET_BASE_URL`** (defaults to `https://test.clawwallet.cc`).
 
 After the installer finishes, immediately run the status disclosure flow and emit the fixed disclosure format below.
 
